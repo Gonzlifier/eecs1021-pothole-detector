@@ -1,0 +1,22 @@
+# Compiled Java bytecode (regenerated from src/)
+out/
+build/
+bin/
+*.class
+
+# IntelliJ IDEA project files
+.idea/
+*.iml
+
+# Arduino build artifacts
+firmware/**/build/
+
+# macOS
+.DS_Store
+
+# Node tooling used only to generate the report (not part of the project)
+node_modules/
+
+# Report + documentation (submitted separately; this repo is code only)
+docs/
+*.docx
