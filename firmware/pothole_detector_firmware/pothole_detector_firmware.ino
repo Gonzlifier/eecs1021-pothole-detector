@@ -4,6 +4,13 @@
  *                    Java-to-Pico Communication Layer
  * =============================================================================
  *
+ * ADAPTED for the final project by Eric Xihuan Shi (222476709).
+ * Base sketch: the EECS 1021 Lab 4 "pico_serial_bridge_v1.0" (course material).
+ * Additions by the author: the ULTRASONIC_* and BUZZER_* command sets, the
+ * short-alias parser (expandAlias), and the reorganized HELP menu. See the
+ * project report, section 4, for the full attribution.
+ * =============================================================================
+ *
  * This firmware turns the Raspberry Pi Pico 2 / Pico 2 W into a "peripheral"
  * that can be controlled from Java code running on your computer.
  *
@@ -557,7 +564,7 @@ void cmdDhtRead() {
         temperature = -temperature;
     }
     
-    // Validate ranges (DHT11 specs: 0-50°C, 20-90% RH)
+    // Validate ranges (DHT11 specs: 0-50 deg C, 20-90% RH)
     if (humidity < 0 || humidity > 100 || temperature < -40 || temperature > 80) {
         respondError("INVALID_DATA");
         return;

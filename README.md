@@ -5,8 +5,8 @@ pointed down at the road; a Java (Swing) app on the computer reads the distance
 stream over USB serial, detects potholes in real time, draws a live graph, logs
 events, and drives LED + buzzer feedback.
 
-The app is built **simulation-first**: it runs with no hardware, and switching to
-the real sensor is just picking a serial port from the dropdown.
+The Java app reads the sensor over USB serial: pick the Pico's serial port from
+the dropdown and press Start.
 
 ---
 
@@ -38,19 +38,23 @@ the real sensor is just picking a serial port from the dropdown.
 - *Embedded* — `pothole_detector_firmware.ino`: drives the sensor (trigger pulse +
   echo timing), drives the LED/buzzer GPIO, speaks the serial protocol.
 - *Software* — the Java app: a custom serial **driver** (`PicoConnection`), a
-  swappable data **source** (`DistanceSource`), detection, visualization, logging.
+  data-**source** abstraction (`DistanceSource`), detection, visualization, logging.
 - *Communication* — line-based ASCII command/response over UART (see below).
 
 ---
 
-## Run it (simulation, no hardware)
+## Build and run
 
-In IntelliJ IDEA:
-1. Open this `PotholeDetector` folder as a project.
-2. Right-click `src` -> **Mark Directory as -> Sources Root**.
-3. Add the serial library: **File -> Project Structure -> Libraries -> + ->**
-   select `lib/jSerialComm-2.11.0.jar`.
-4. Run `Main.java`, leave **Source = Simulated**, press **Start**.
+1. **Upload the firmware:** open `firmware/pothole_detector_firmware/` in the
+   Arduino IDE and upload it to the Raspberry Pi Pico 2 W.
+2. **Wire it up** (see the table below).
+3. **Open the Java app in IntelliJ IDEA:**
+   - Open this `PotholeDetector` folder as a project.
+   - Right-click `src` -> **Mark Directory as -> Sources Root**.
+   - Add the serial library: **File -> Project Structure -> Libraries -> + ->**
+     select `lib/jSerialComm-2.11.0.jar`.
+4. **Run** `Main.java`, click **Refresh** to list serial ports, pick the Pico's
+   port from **Source** (on macOS it looks like `cu.usbmodemXXXX`), press **Start**.
 
 Command line:
 ```
@@ -58,22 +62,11 @@ javac -cp lib/jSerialComm-2.11.0.jar -d out src/*.java
 java  -cp "out:lib/jSerialComm-2.11.0.jar" Main      # Windows: use ';' instead of ':'
 ```
 
-You'll see the live graph, the event log, and the LED indicator flash + a beep on
-each simulated pothole. Use the **Threshold** slider and the **LED/Buzzer
-feedback** checkboxes to tune behaviour.
-
----
-
-## Run it (real hardware)
-
-1. **Upload firmware:** open `firmware/pothole_detector_firmware/` in the Arduino
-   IDE and upload to the Pico.
-2. **Wire it up** (see table below).
-3. In the app, click **↻** to refresh ports, pick the Pico's port from **Source**
-   (on macOS it looks like `cu.usbmodemXXXX`), press **Start**.
-
-No detection / chart / logging code changes between sim and hardware — that is the
-purpose of the `DistanceSource` interface.
+After you press Start the app calibrates a baseline (~1.5 s), then detects
+potholes live: the graph spikes, the event log records each one, and the LED +
+buzzer fire. Use the **Threshold** slider and the **LED / Buzzer feedback**
+checkboxes to tune behaviour; the **Inject pothole** button forces a detection for
+demos.
 
 ### Wiring
 
@@ -148,8 +141,7 @@ captures 100 samples and logs a summary you can paste into the report:
 
 - **Sample rate (Hz)** — how many distance readings/second the pipeline sustains.
 - **Latency (ms)** — round-trip time of one `ULTRASONIC_READ` (send → sensor ping
-  → reply), measured on the serial worker thread. Simulation reports `n/a` (no
-  serial hop).
+  → reply), measured on the serial worker thread.
 - **Noise (± cm)** — standard deviation of resting readings; a proxy for sensor
   precision / repeatability. Feeds the choice of detection threshold.
 
@@ -187,8 +179,7 @@ Each is independently toggled by a checkbox. Depth-to-angle mapping:
 | `firmware/.../pothole_detector_firmware.ino` | Embedded | Sensor driver (pulse/timing), actuators, serial protocol |
 | `src/PicoConnection.java` | Software (driver) | Low-level UART send/receive |
 | `src/DistanceSource.java` | Software | Interface: "something that produces readings" |
-| `src/SimulatedSource.java` | Software | Fake road data (no hardware) |
-| `src/PicoSerialSource.java` | Software | Real source: polls sensor, drives actuators |
+| `src/PicoSerialSource.java` | Software | Reads the sensor over serial, drives actuators |
 | `src/PicoFeedback.java` | Software | Interface: LED/buzzer actuator output |
 | `src/PotholeAnalyzer.java` | Software | Moving-average baseline + threshold detection |
 | `src/LiveChartPanel.java` | Software | Custom-painted live graph |

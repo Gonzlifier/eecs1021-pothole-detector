@@ -1,3 +1,8 @@
+/*
+ * Pothole Detector - EECS 1021-E Final Project
+ * Author: Eric Xihuan Shi (222476709)
+ */
+
 import com.fazecast.jSerialComm.SerialPort;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -14,8 +19,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  *     polls, so feedback calls from the UI thread never block on serial I/O and
  *     no locking is required.
  *
- * To switch the app from simulation to hardware, MainFrame just creates this
- * instead of SimulatedSource. The detector, chart and logging are unchanged.
+ * MainFrame creates this from the selected serial port; the detector, chart and
+ * logging depend only on the DistanceSource interface, not on this class.
  */
 public class PicoSerialSource implements DistanceSource, PicoFeedback {
 

@@ -1,3 +1,8 @@
+/*
+ * Pothole Detector - EECS 1021-E Final Project
+ * Author: Eric Xihuan Shi (222476709)
+ */
+
 import com.fazecast.jSerialComm.SerialPort;
 
 import java.io.BufferedReader;

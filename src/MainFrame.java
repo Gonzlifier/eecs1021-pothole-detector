@@ -1,3 +1,8 @@
+/*
+ * Pothole Detector - EECS 1021-E Final Project
+ * Author: Eric Xihuan Shi (222476709)
+ */
+
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.JButton;
@@ -30,9 +35,9 @@ import java.util.Deque;
  *   DistanceSource --(background thread)--> onReading() --(invokeLater)-->
  *       PotholeAnalyzer.accept() --> chart + log, and on a detection --> feedback
  *
- * The source can be "Simulated" (no hardware) or a real Pico on a serial port,
- * chosen from the dropdown. Everything that touches Swing or the analyzer runs
- * on the Swing event thread; the serial/sim worker marshals onto it.
+ * The data source is a Pico on a serial port, chosen from the dropdown.
+ * Everything that touches Swing or the analyzer runs on the Swing event thread;
+ * the serial worker marshals onto it.
  */
 public class MainFrame extends JFrame {
 
@@ -54,7 +59,7 @@ public class MainFrame extends JFrame {
 
     // --- controls ---
     private final JComboBox<String> sourceSelect = new JComboBox<>();
-    private final JButton refreshPorts = new JButton("↻"); // refresh symbol
+    private final JButton refreshPorts = new JButton("Refresh"); // re-scan serial ports
     private final JButton startStop = new JButton("Start");
     private final JButton injectBtn = new JButton("Inject pothole");
     private final JSlider thresholdSlider = new JSlider(5, 100, (int) (DEFAULT_THRESHOLD * 10));
@@ -168,18 +173,19 @@ public class MainFrame extends JFrame {
         });
     }
 
-    /** Populate the source dropdown: always "Simulated", plus any serial ports. */
+    /** Populate the source dropdown with the available serial ports. */
     private void reloadPorts() {
         Object previous = sourceSelect.getSelectedItem();
         sourceSelect.removeAllItems();
-        sourceSelect.addItem("Simulated");
         try {
             for (String p : PicoSerialSource.listPorts()) {
                 sourceSelect.addItem(p);
             }
         } catch (Throwable t) {
-            // jSerialComm not on the classpath yet -> simulation only
-            append("(serial library not loaded; simulation only)");
+            append("(serial library not loaded)");
+        }
+        if (sourceSelect.getItemCount() == 0) {
+            append("(no serial ports found - plug in the Pico and press Refresh)");
         }
         if (previous != null) sourceSelect.setSelectedItem(previous);
     }
@@ -200,19 +206,16 @@ public class MainFrame extends JFrame {
             return;
         }
 
-        // Build the chosen source. THIS is the only place that differs between
-        // simulation and real hardware.
         String sel = (String) sourceSelect.getSelectedItem();
-        if (sel == null || sel.equals("Simulated")) {
-            source = new SimulatedSource();
-            feedback = null;
-        } else {
-            PicoSerialSource pico = new PicoSerialSource(sel);
-            pico.setErrorHandler(msg -> SwingUtilities.invokeLater(() -> append("! " + msg)));
-            pico.setMetricsListener(ms -> SwingUtilities.invokeLater(() -> onLatencySample(ms)));
-            source = pico;
-            feedback = pico;      // same object also drives the actuators
+        if (sel == null) {
+            append("(no serial port selected - plug in the Pico and press Refresh)");
+            return;
         }
+        PicoSerialSource pico = new PicoSerialSource(sel);
+        pico.setErrorHandler(msg -> SwingUtilities.invokeLater(() -> append("! " + msg)));
+        pico.setMetricsListener(ms -> SwingUtilities.invokeLater(() -> onLatencySample(ms)));
+        source = pico;
+        feedback = pico;      // same object also drives the actuators
 
         analyzer.reset();              // re-calibrate from scratch each Start
         resetMetrics();
@@ -228,7 +231,7 @@ public class MainFrame extends JFrame {
     /**
      * Demo helper: force a pothole by feeding one spiked reading through the
      * normal pipeline, so it triggers the real detector, log and LED/buzzer just
-     * like a genuine pothole would. Works in both simulation and hardware mode.
+     * like a genuine pothole would.
      */
     private void injectPothole() {
         if (!running) {
@@ -311,7 +314,7 @@ public class MainFrame extends JFrame {
         double elapsed = metricFirstNanos == 0 ? 0 : (System.nanoTime() - metricFirstNanos) / 1e9;
         double rate = elapsed > 0 ? metricSamples / elapsed : 0;
         String lat = latCount > 0 ? String.format("%.1f ms", latSum / latCount) : "n/a";
-        String noise = noiseBuf.size() >= 2 ? String.format("±%.2f cm", stddev(noiseBuf)) : "--";
+        String noise = noiseBuf.size() >= 2 ? String.format("+/-%.2f cm", stddev(noiseBuf)) : "--";
         metricsLabel.setText(String.format("rate %.1f Hz   |   latency %s   |   noise %s", rate, lat, noise));
     }
 
@@ -324,9 +327,9 @@ public class MainFrame extends JFrame {
             append(String.format("  latency     : avg %.1f ms  (min %.1f, max %.1f)",
                     latSum / latCount, latMin, latMax));
         } else {
-            append("  latency     : n/a (simulation - no serial round-trip)");
+            append("  latency     : n/a (no samples yet)");
         }
-        append(String.format("  noise (rest): ±%.2f cm std dev",
+        append(String.format("  noise (rest): +/-%.2f cm std dev",
                 noiseBuf.size() >= 2 ? stddev(noiseBuf) : 0.0));
         append("========================================");
     }
